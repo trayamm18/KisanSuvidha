@@ -104,37 +104,12 @@ KisanSuvidha/
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Setup & Operations Documentation
 
-### 1. Prerequisites
-Ensure you have Node.js (v18+) and Git installed.
+To setup, install, run, or review the system design, please refer to the specific guides housed in the [docs/](docs) directory:
 
-### 2. Installation
-Clone the repository and install project dependencies:
-```bash
-npm install
-```
-
-### 3. Environment & Firebase Config
-Create a Firebase project, configure Phone Auth and Firestore, and download configuration files:
-* Place `google-services.json` in the root (excluded from Git).
-* Set up a Cloudinary cloud account and populate key values inside your project environment files.
-
-### 4. Running Locally
-Launch the Metro bundler to run on your local device or simulator:
-```bash
-npx expo start
-```
-* Press **a** to run on an Android emulator.
-* Press **i** to run on an iOS simulator.
-* Scan the QR code with the Expo Go app to test directly on a physical device.
-
----
-
-## 📝 Code Quality & Verification Checklist
-
-* [x] **Secure Secrets**: Service credentials and keys ignored via [.gitignore](.gitignore) patterns.
-* [x] **Safe Routing**: Navigation back-button prompts to exit instead of exposing protected logins.
-* [x] **Offline Indicators**: NetInfo-driven state indicator displays internet drops dynamically.
-* [x] **Responsive Typography**: Theme-derived typography tokens adapt layout grids to tablet and phone.
-* [x] **Sensory Engagement**: Physical click verification using `expo-haptics` triggers.
+* **⚙️ Local Development Setup**: Refer to [docs/INSTALLATION.md](docs/INSTALLATION.md) for installation commands, prerequisites, and Firebase settings.
+* **🏗️ App Architecture**: Review [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to understand data flows, screen states, and styling.
+* **🤖 ML Feature Blueprint**: Learn about the AI Krishi Doctor and Fertilizer recommendation setup in [docs/ML_FEATURES_PLAN.md](docs/ML_FEATURES_PLAN.md).
+* **🩹 Bug & Security Report**: Review fixes made and active security benchmarks in [docs/BUG_REPORT.md](docs/BUG_REPORT.md).
+* **🚀 Quality Checklist**: Reference [docs/PROFESSIONAL_CHECKLIST.md](docs/PROFESSIONAL_CHECKLIST.md) for verification criteria.
