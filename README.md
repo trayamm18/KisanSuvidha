@@ -1,115 +1,71 @@
 # 🌾 Kisan Suvidha (किसान सुविधा)
 
-### *An Enterprise-Grade, Multilingual Agri-Commerce & Logistics Mobile Ecosystem*
+### *Your Digital Agricultural Companion*
 
 ![Kisan Suvidha Banner](assets/images/kisan_suvidha_banner.png)
 
 ---
 
-## 📖 Overview
+## 📖 About the App
 
-**Kisan Suvidha** (translated: *Farmer Facility*) is a high-performance, resilient mobile application built on **React Native (Expo SDK 54)** and **TypeScript**, backed by **Firebase Services**. Designed specifically for the Indian agricultural landscape, it connects three key roles—**Farmers**, **Suvidhaks (Field Facilitators)**, and **Administrators**—into a single synchronized ecosystem. 
-
-The application facilitates agricultural retail, local weather alerts, crop logs, field agent logistics tracking, and administrative business intelligence.
+**Kisan Suvidha** (translated: *Farmer Facility*) is a modern mobile application designed to support the Indian farming community. Built using React Native and Firebase, the app brings together **Farmers**, **Field Agents (Suvidhaks)**, and **Administrators** into a single, easy-to-use platform for agricultural commerce and support.
 
 ---
 
-## 📱 Core Modules & User Interfaces
+## 📱 Key Features
 
-### 1. The Farmer Agri-Input Shop
-The Farmer interface features a clean, high-performance shopping page utilizing warm paper-tints and organic earth tones. It organizes agri-inputs (seeds, fertilizers, pesticides, tools) into structured, scrollable catalog grids.
-
-* **Agri-Input Catalog**: Browse seeds, fertilizers, pesticides, and tools in a responsive two-column grid showing product cards with pricing and rating data.
-* **Category Filtering**: Horizontal, interactive chips to quickly toggle catalog focus (e.g., Seeds, Fertilizers, Pesticides).
-* **Cart Badge Integration**: Active cart count updates in real-time on the global header badge for continuous feedback.
+### 1. Farmer Shop & Crop Guides
+* **Agricultural Shop**: Browse and buy seeds, fertilizers, pesticides, and tools in a clean, user-friendly shop catalog.
+* **Crop insights**: Access schedules, crop logs, and custom weather advice.
 
 <p align="center">
-  <img src="assets/images/farmer_shop_ui.png" width="370" alt="Farmer Shopping UI" />
+  <img src="assets/images/farmer_shop_ui.png" width="350" alt="Farmer Shopping UI" />
 </p>
 
 ---
 
-### 2. AI Krishi Doctor (Future Roadmap Feature)
-The AI Krishi Doctor module is planned to allow instant leaf scan diagnostics, highlighting pest damage and leaf blight using computer vision, and mapping matches to inventory products.
-
-* **Image Scanning**: Integration with `expo-image-picker` to capture or upload crop leaf photographs.
-* **Diagnostics Pipeline**: Runs image categorization and identifies leaf disease confidence.
-* **Automated Prescription**: Prompts the matching pesticides or organic fertilizers from the active Firestore catalog, allowing farmers to add them to the cart instantly.
+### 2. AI Krishi Doctor (AI Crop Doctor)
+* **Leaf Scan Diagnosis**: Snap a photo of a diseased crop leaf to get an instant diagnosis.
+* **Product Matches**: Get recommendations for the exact organic treatments or pesticides available in the shop.
 
 <p align="center">
-  <img src="assets/images/ai_crop_doctor_ui.png" width="370" alt="AI Crop Doctor Diagnostic UI" />
+  <img src="assets/images/ai_crop_doctor_ui.png" width="350" alt="AI Crop Doctor Diagnostic UI" />
 </p>
 
 ---
 
-### 3. Suvidhak (Field Agent) Hub
-Field Agents (*Suvidhaks*) serve as local intermediaries who help onboard farmers, record cash/credit purchases on-site, and manage local delivery dispatches.
-
-* **Assisted Sales Engine**: Log point-of-sale transactions and customer data on behalf of offline farmers.
-* **Offline Delivery Dispatch**: Tracks delivery runs and updates payment verification status.
-* **Gamified Leaderboard**: A performance leaderboard that aggregates transaction totals per agent, sorting them in O(N log N) complexity to rank active facilitators.
+### 3. Field Agent (Suvidhak) Dashboard
+* **Assisted Sales**: Log purchases and customer details directly for offline farmers.
+* **Logistics Tracker**: Manage active deliveries and collect payments.
+* **Leaderboard**: Track agent sales performance rankings on a friendly leaderboard.
 
 ---
 
-### 4. Admin Operations & Business Intelligence
-Administrators manage inventory catalogs, resolve support tickets, and analyze performance across regions.
-
-* **Inventory Management**: Control catalog parameters (add, modify, delete input products and variants).
-* **BI Dashboard**: Renders interactive sales trend analytics, average order value (AOV), and facilitator metrics using **React Native Chart Kit** custom bezier lines.
+### 4. Admin Management
+* **Catalog Control**: Easily add, edit, or delete products and price details.
+* **Sales Analytics**: View total revenue, active orders, and sales trends on interactive charts.
 
 <p align="center">
-  <img src="assets/images/admin_analytics_ui.png" width="370" alt="Admin Business Intelligence Analytics UI" />
+  <img src="assets/images/admin_analytics_ui.png" width="350" alt="Admin Business Intelligence Analytics UI" />
 </p>
 
 ---
 
-## 🏗️ Technical Architecture & Design Implementation
+## 📂 Project Organization
 
-The codebase is structured around **Clean Architecture** principles to separate business logic, dynamic styling, components, and data mapping.
-
-```
-KisanSuvidha/
-├── app/                        # File-Based Expo Router Stack & Guards
-│   ├── _layout.jsx             # Root layout wrapping global ErrorBoundary
-│   ├── index.jsx               # Bootloader & Role-based Navigation Guard
-│   ├── login.jsx               # Phone authentication screen
-│   ├── farmer-*.jsx            # Farmer layout modules
-│   ├── suvidhak-*.jsx          # Suvidhak (Field Facilitator) dashboard screens
-│   └── admin-*.jsx             # Administrative console modules
-├── components/                 # Reusable Presentation Layer
-│   ├── BeautifulButtons.jsx    # Animated primary and secondary haptic buttons
-│   ├── BeautifulCards.jsx      # Specialized stat, product, and alert cards
-│   ├── SkeletonLoader.jsx      # Shimmer loaders running on native animation drivers
-│   └── ErrorBoundary.jsx       # Global JavaScript runtime exception handler
-├── utils/                      # Business Logic & Utility Functions
-│   ├── database.js             # Decoupled Firestore collection queries
-│   ├── theme.js                # Dynamic ThemeProvider (Earth, Sage, Ocean, etc.)
-│   └── ui.js                   # Async pipelines (safeAsync, withRetry, debounce)
-└── config/                     # Native SDK Initializers
-    └── firebase.js             # Firebase Auth, Firestore, and Storage setup
-```
-
-### ⚡ Technical Optimizations
-
-1. **Native Thread-Driven Loading Animation**:
-   [SkeletonLoader.jsx](components/SkeletonLoader.jsx) uses React Native `Animated` API with `useNativeDriver: true` to loop shimmer loops, shifting interpolation computations from the JavaScript event loop to the Native OS thread for a stable 60 FPS transition state.
-2. **Resilient Network Request Wrapper**:
-   [ui.js](utils/ui.js) houses `safeAsync` and `withRetry` functions. The retry hook implements a linear backoff algorithm (`delayMs * attempt`) to recover failed remote executions during offline states.
-3. **Firestore Connection Protection**:
-   All dynamic queries in [database.js](utils/database.js) are managed through listener hooks that execute cleanups (`onSnapshot` unsubscribes) on component teardown, preventing active socket leaks and minimizing network overhead.
-4. **Exception Containment**:
-   [ErrorBoundary.jsx](components/ErrorBoundary.jsx) acts as a declarative boundary capturing rendering exceptions, parsing trace messages in development mode, and displaying a recovery fallback state to prevent white-screen application crashes.
-5. **Dynamic Branding Tokens**:
-   [theme.js](utils/theme.js) exposes a central Context provider mapping spacing scales, dynamic color configurations (such as Warm Earth, Sage Green, Deep Midnight), and haptic feedbacks to guarantee UX uniformity.
+* **`app/`**: Application navigation pages and user screens.
+* **`components/`**: Reusable UI elements (custom buttons, cards, skeletons, and loaders).
+* **`docs/`**: Setup, installation, architecture, and feature manuals.
+* **`utils/`**: Helper files (database calls, theme configurations, error checks).
+* **`assets/`**: Images, icons, and crop resources.
 
 ---
 
-## 🛠️ Setup & Operations Documentation
+## 🚀 Setup & Documentation Guides
 
-To setup, install, run, or review the system design, please refer to the specific guides housed in the [docs/](docs) directory:
+For help setting up the project locally or reviewing its design details, refer to the files in the **[docs/](docs)** directory:
 
-* **⚙️ Local Development Setup**: Refer to [docs/INSTALLATION.md](docs/INSTALLATION.md) for installation commands, prerequisites, and Firebase settings.
-* **🏗️ App Architecture**: Review [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to understand data flows, screen states, and styling.
-* **🤖 ML Feature Blueprint**: Learn about the AI Krishi Doctor and Fertilizer recommendation setup in [docs/ML_FEATURES_PLAN.md](docs/ML_FEATURES_PLAN.md).
-* **🩹 Bug & Security Report**: Review fixes made and active security benchmarks in [docs/BUG_REPORT.md](docs/BUG_REPORT.md).
-* **🚀 Quality Checklist**: Reference [docs/PROFESSIONAL_CHECKLIST.md](docs/PROFESSIONAL_CHECKLIST.md) for verification criteria.
+* **⚙️ How to Install and Run**: See [docs/INSTALLATION.md](docs/INSTALLATION.md) for step-by-step setup and Firebase configurations.
+* **🏗️ App Architecture**: Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to understand navigation logic and data structures.
+* **🤖 AI/ML Features Guide**: Review the smart recommendations blueprint in [docs/ML_FEATURES_PLAN.md](docs/ML_FEATURES_PLAN.md).
+* **🩹 Bug Fixes & Checks**: Read [docs/BUG_REPORT.md](docs/BUG_REPORT.md) and [docs/PROFESSIONAL_CHECKLIST.md](docs/PROFESSIONAL_CHECKLIST.md) for quality logs.
