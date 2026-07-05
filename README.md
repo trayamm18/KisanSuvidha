@@ -16,15 +16,15 @@ The application facilitates agricultural retail, local weather alerts, crop logs
 
 ## 📱 Core Modules & User Interfaces
 
-### 1. The Farmer Workspace
-The Farmer dashboard is designed around a conversational, clean UI using warm paper-tints and organic earth tones. It provides crop logs, horizontal crop schedules, localized weather reports, and an integrated inputs catalog.
+### 1. The Farmer Agri-Input Shop
+The Farmer interface features a clean, high-performance shopping page utilizing warm paper-tints and organic earth tones. It organizes agri-inputs (seeds, fertilizers, pesticides, tools) into structured, scrollable catalog grids.
 
-* **Crop Monitoring**: "Mere Khet ki Shaan" (The Pride of my Farm) section tracks days since sowing, crop stages, and harvesting schedules.
-* **Conversational Weather**: "Mausam ka Haal" translates raw weather parameters into context-specific advice for farming tasks.
-* **Agri-Input Shop**: A localized shop allowing farmers to browse, filter by category (seeds, pesticides, fertilizers), and add items to a dynamic cart.
+* **Agri-Input Catalog**: Browse seeds, fertilizers, pesticides, and tools in a responsive two-column grid showing product cards with pricing and rating data.
+* **Category Filtering**: Horizontal, interactive chips to quickly toggle catalog focus (e.g., Seeds, Fertilizers, Pesticides).
+* **Cart Badge Integration**: Active cart count updates in real-time on the global header badge for continuous feedback.
 
 <p align="center">
-  <img src="assets/images/farmer_dashboard_ui.png" width="370" alt="Farmer Dashboard UI" />
+  <img src="assets/images/farmer_shop_ui.png" width="370" alt="Farmer Shopping UI" />
 </p>
 
 ---
