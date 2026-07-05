@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import firestore from "@react-native-firebase/firestore";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EmptyState from "../components/EmptyState";
 import OfflineIndicator from "../components/OfflineIndicator";
 import { getAllProducts } from "../utils/database";
+import { useTheme } from "../utils/theme";
+
+function useStyles() {
+  const { colors } = useTheme();
+  return useMemo(() => makeStyles(colors || {}), [colors]);
+}
 
 // Import crop images mapping (same as setup-crops.jsx)
 const CROP_IMAGES = {
@@ -190,12 +196,20 @@ const { width } = Dimensions.get("window");
 export default function HomeFarmerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { colors, paletteKey, setPalette } = useTheme();
+  const styles = useStyles();
   const [activeTab, setActiveTab] = useState("explore");
   const [language, setLanguage] = useState("en");
   const [cart, setCart] = useState([]);
 
   // ✅ FIX: Back button handler to prevent going back to login
   useEffect(() => {
+    // Apply earth palette while this screen is active, restore previous on unmount
+    const prev = paletteKey;
+    try {
+      setPalette("earth");
+    } catch (e) {}
+
     const backAction = () => {
       Alert.alert("Exit App?", "Do you want to exit Kisan Suvidha?", [
         { text: "Cancel", style: "cancel" },
@@ -208,7 +222,13 @@ export default function HomeFarmerScreen() {
       "hardwareBackPress",
       backAction,
     );
-    return () => backHandler.remove();
+
+    return () => {
+      try {
+        setPalette(prev);
+      } catch (e) {}
+      backHandler.remove();
+    };
   }, []);
 
   useFocusEffect(
@@ -238,7 +258,7 @@ export default function HomeFarmerScreen() {
       const savedCart = await AsyncStorage.getItem("farmerCart");
       if (savedCart) setCart(JSON.parse(savedCart));
     } catch (e) {
-      console.error("Failed to load cart:", e);
+      // Failed to load cart
     }
   };
 
@@ -279,7 +299,11 @@ export default function HomeFarmerScreen() {
           style={styles.profileBtn}
           onPress={() => router.push("/farmer-profile")}
         >
-          <Ionicons name="person-circle-outline" size={36} color="#2E7D32" />
+          <Ionicons
+            name="person-circle-outline"
+            size={36}
+            color={colors?.primary || "#2E7D32"}
+          />
         </TouchableOpacity>
       </View>
 
@@ -327,14 +351,29 @@ export default function HomeFarmerScreen() {
   );
 }
 
-const NavButton = ({ title, icon, isActive, onPress }) => (
-  <TouchableOpacity style={styles.navItem} onPress={onPress}>
-    <Ionicons name={icon} size={24} color={isActive ? "#2E7D32" : "#999"} />
-    <Text style={[styles.navText, isActive && styles.navTextActive]}>
-      {title}
-    </Text>
-  </TouchableOpacity>
-);
+function NavButton({ title, icon, isActive, onPress }) {
+  const styles = useStyles();
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity style={styles.navItem} onPress={onPress}>
+      <Ionicons
+        name={icon}
+        size={24}
+        color={
+          isActive ? colors?.primary || "#2E7D32" : colors?.subText || "#999"
+        }
+      />
+      <Text
+        style={[
+          styles.navText,
+          isActive && { color: colors?.primary || "#2E7D32" },
+        ]}
+      >
+        {title}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 // Weather Display Component with Animation
 function WeatherDisplay({ temp, condition, t }) {
@@ -346,6 +385,7 @@ function WeatherDisplay({ temp, condition, t }) {
   useEffect(() => {
     animatedValue.value = withTiming(1, { duration: 800 });
   }, []);
+  const styles = useStyles();
 
   return (
     <View style={styles.weatherContent}>
@@ -369,6 +409,8 @@ function CropCircleItem({ cropName, cropImage, onPress }) {
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+  const { colors } = useTheme();
+  const styles = useStyles();
 
   return (
     <Animated.View style={animatedStyle}>
@@ -391,7 +433,11 @@ function CropCircleItem({ cropName, cropImage, onPress }) {
               resizeMode="cover"
             />
           ) : (
-            <MaterialCommunityIcons name="sprout" size={32} color="#4A5D23" />
+            <MaterialCommunityIcons
+              name="sprout"
+              size={32}
+              color={colors?.primary || "#4A5D23"}
+            />
           )}
         </View>
         <Text style={styles.cropCircleText} numberOfLines={1}>
@@ -407,6 +453,8 @@ function CropCircleItem({ cropName, cropImage, onPress }) {
 // ────────────────────────────────────────────────
 function ExploreTab({ t }) {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useStyles();
   const [promotions, setPromotions] = useState([]);
   const [products, setProducts] = useState([]);
   const [userCrops, setUserCrops] = useState([]);
@@ -423,7 +471,7 @@ function ExploreTab({ t }) {
           setUserCrops(userData.mainCrops || []);
         }
       } catch (error) {
-        console.error("Error loading user crops:", error);
+        // Error loading user crops
       }
     };
     loadUserCrops();
@@ -467,7 +515,6 @@ function ExploreTab({ t }) {
             }
           },
           (error) => {
-            console.error("Error fetching promotions:", error);
             setPromotions([]);
           },
         );
@@ -487,12 +534,11 @@ function ExploreTab({ t }) {
             }
           },
           (error) => {
-            console.error("Error fetching products:", error);
             setProducts([]);
           },
         );
     } catch (error) {
-      console.error("Error setting up Firebase listeners:", error);
+      // Error setting up Firebase listeners
     }
 
     return () => {
@@ -513,27 +559,42 @@ function ExploreTab({ t }) {
     <View style={styles.exploreContainer}>
       <OfflineIndicator />
       <ScrollView style={styles.tab} showsVerticalScrollIndicator={false}>
-        {/* Welcome Banner - Asymmetric with Gradient */}
-        <View style={styles.welcomeBannerHumanistic}>
-          <ImageBackground
-            source={require("../assets/farmer-couple.png")}
-            style={styles.welcomeBannerBg}
-            imageStyle={{ opacity: 0.15 }}
-          >
-            <View style={styles.welcomeBannerOverlay}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.welcomeTitleHumanistic}>
-                  {t("Namaste Kisan Mitra! 🙏", "नमस्ते किसान मित्र! 🙏")}
-                </Text>
-                <Text style={styles.welcomeSubHumanistic}>
-                  {t("Hamare Bharat ki Shaan.", "हमारे भारत की शान। ")}
-                </Text>
-                <Text style={styles.welcomeSubHumanisticSmall}>
-                  {t("Apki Kheti Mein Barkat Ho.", "आपकी खेती में बरकत हो।")}
-                </Text>
-              </View>
+        {/* Greeting Banner - Clean Green Design with Wheat Field Background */}
+        <ImageBackground
+          source={require("../assets/wheat-field.jpg")}
+          style={styles.greetingBanner}
+          imageStyle={{ opacity: 0.8 }}
+        >
+          <View style={styles.greetingBannerOverlay}>
+            <View style={styles.greetingContent}>
+              <Text style={styles.greetingTitle}>Namaste Kisan Mitra! 🙏</Text>
+              <Text style={styles.greetingSubtitle}>
+                Apki Kheti Mein Barkat Ho.
+              </Text>
             </View>
-          </ImageBackground>
+          </View>
+        </ImageBackground>
+
+        {/* Weather Card - Enhanced */}
+        <View style={styles.weatherBannerEnhanced}>
+          <View style={styles.weatherLeftSection}>
+            <View style={styles.weatherIconBox}>
+              <Text style={styles.weatherIconEmoji}>☀️</Text>
+            </View>
+            <View style={styles.weatherInfo}>
+              <Text style={styles.weatherTemp}>
+                {weather.temp}°C{" "}
+                <Text style={styles.weatherCondition}>{weather.condition}</Text>
+              </Text>
+              <Text style={styles.weatherOptimal}>
+                Perfect for farming today!
+              </Text>
+            </View>
+          </View>
+          <View style={styles.weatherRightSection}>
+            <Text style={styles.humidityLabel}>Humidity</Text>
+            <Text style={styles.humidityValue}>45%</Text>
+          </View>
         </View>
 
         {/* Crop Insights Section - Horizontal Scroll with Photography */}
@@ -565,25 +626,6 @@ function ExploreTab({ t }) {
             </ScrollView>
           </>
         )}
-
-        {/* Weather Section - Conversational UI */}
-        <View style={styles.weatherCardHumanistic}>
-          <View style={styles.weatherHeader}>
-            <Ionicons name="partly-sunny" size={24} color="#4A5D23" />
-            <Text style={styles.weatherTitle}>
-              {t("Mausam ka Haal", "मौसम का हाल")}
-            </Text>
-          </View>
-          {loadingWeather ? (
-            <ActivityIndicator size="small" color="#4A5D23" />
-          ) : (
-            <WeatherDisplay
-              temp={weather.temp}
-              condition={weather.condition}
-              t={t}
-            />
-          )}
-        </View>
 
         {/* Recommended Products */}
         {products.length > 0 && (
@@ -619,7 +661,7 @@ function ExploreTab({ t }) {
                       <MaterialCommunityIcons
                         name="leaf"
                         size={40}
-                        color="#4A5D23"
+                        color={colors?.primary || "#4A5D23"}
                       />
                     </View>
                   )}
@@ -750,6 +792,8 @@ function ShopTab({ t, cart, updateCartQuantity }) {
       loadProducts();
     }, []),
   );
+
+  const styles = useStyles();
 
   const loadProducts = async () => {
     setLoading(true);
@@ -1037,6 +1081,8 @@ function OrdersTab({ t }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const styles = useStyles();
+
   useFocusEffect(
     useCallback(() => {
       loadOrders();
@@ -1162,6 +1208,8 @@ function HelpChatTab({ t, language }) {
   const [inputMode, setInputMode] = useState(false);
   const [customNumber, setCustomNumber] = useState("");
   const [pendingTicket, setPendingTicket] = useState(null);
+
+  const styles = useStyles();
 
   useEffect(() => {
     loadUser();
@@ -1400,621 +1448,861 @@ function HelpChatTab({ t, language }) {
 // ────────────────────────────────────────────────
 // Styles (Ultra-Lifted & Modernized)
 // ────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F9F7" }, // Warm paper tint
-  exploreContainer: { flex: 1, backgroundColor: "#F9F9F7" },
+export function makeStyles(colors = {}) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background || "#F9F9F7" }, // Warm paper tint
+    exploreContainer: {
+      flex: 1,
+      backgroundColor: colors.background || "#F9F9F7",
+    },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 55,
-    paddingBottom: 15,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#2E7D32",
-    letterSpacing: 0.5,
-  },
-  profileBtn: { padding: 5 },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 55,
+      paddingBottom: 15,
+      backgroundColor: colors.surface || "#fff",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.cardBorder || "#f0f0f0",
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: "800",
+      color: colors.primary || "#2E7D32",
+      letterSpacing: 0.5,
+    },
+    profileBtn: { padding: 5 },
 
-  content: { flex: 1 },
-  tab: { flex: 1 },
+    content: { flex: 1 },
+    tab: { flex: 1 },
 
-  // Humanistic Welcome Banner
-  welcomeBannerHumanistic: {
-    margin: 20,
-    marginBottom: 20,
-    borderRadius: 24,
-    overflow: "hidden",
-    height: 140,
-  },
-  welcomeBannerBg: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#4A5D23", // Moss Green
-  },
-  welcomeBannerOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(74, 93, 35, 0.85)",
-    padding: 24,
-    justifyContent: "center",
-  },
-  welcomeTitleHumanistic: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#FAF9F7",
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  welcomeSubHumanistic: {
-    fontSize: 18,
-    color: "#E8E6E0",
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  welcomeSubHumanisticSmall: {
-    fontSize: 14,
-    color: "#D4D2CC",
-    fontWeight: "500",
-    lineHeight: 20,
-  },
-  welcomeImage: { width: 80, height: 80, resizeMode: "contain" },
+    // Humanistic Welcome Banner
+    welcomeBannerHumanistic: {
+      margin: 20,
+      marginBottom: 20,
+      borderRadius: 24,
+      overflow: "hidden",
+      height: 140,
+    },
+    welcomeBannerBg: {
+      width: "100%",
+      height: "100%",
+      backgroundColor: colors.primaryDark || colors.primary || "#4A5D23",
+    },
+    welcomeBannerOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.12)",
+      padding: 24,
+      justifyContent: "center",
+    },
+    welcomeTitleHumanistic: {
+      fontSize: 28,
+      fontWeight: "900",
+      color: colors.white || "#FAF9F7",
+      marginBottom: 8,
+      letterSpacing: 0.5,
+    },
+    welcomeSubHumanistic: {
+      fontSize: 18,
+      color: colors.subText || "#E8E6E0",
+      fontWeight: "700",
+      marginBottom: 4,
+    },
+    welcomeSubHumanisticSmall: {
+      fontSize: 14,
+      color: colors.subText || "#D4D2CC",
+      fontWeight: "500",
+      lineHeight: 20,
+    },
+    welcomeImage: { width: 80, height: 80, resizeMode: "contain" },
 
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#222",
-    marginLeft: 20,
-    marginBottom: 15,
-    marginTop: 10,
-  },
-  sectionTitleHumanistic: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#1B5E20", // Forest Green
-    marginLeft: 20,
-    marginBottom: 16,
-    marginTop: 24,
-    letterSpacing: 0.3,
-  },
+    // Hero Walk - Wheat Field Background
+    heroWalkBackgroundImage: {
+      width: "100%",
+      height: 240,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    heroWalkOverlay: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.35)",
+      width: "100%",
+      paddingHorizontal: 30,
+    },
+    heroWalkMainText: {
+      fontSize: 42,
+      fontWeight: "900",
+      color: colors.white || "#FAF9F7",
+      textAlign: "center",
+      marginBottom: 16,
+      letterSpacing: 1.2,
+      textShadowColor: "rgba(0, 0, 0, 0.5)",
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    },
+    heroWalkSubText: {
+      fontSize: 24,
+      fontWeight: "800",
+      color: colors.white || "#FAF9F7",
+      textAlign: "center",
+      marginBottom: 12,
+      letterSpacing: 0.8,
+      textShadowColor: "rgba(0, 0, 0, 0.5)",
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    },
+    heroWalkBottomText: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.white || "#FAF9F7",
+      textAlign: "center",
+      letterSpacing: 0.6,
+      textShadowColor: "rgba(0, 0, 0, 0.5)",
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+    },
 
-  recommendations: { paddingLeft: 20, paddingRight: 20 },
-  recommendCard: {
-    width: 150,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 15,
-    marginRight: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 3,
-    marginBottom: 10,
-  },
-  recommendImage: {
-    width: "100%",
-    height: 90,
-    backgroundColor: "#F1F8E9",
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  recommendName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 5,
-    lineHeight: 20,
-  },
-  recommendPrice: { fontSize: 15, fontWeight: "bold", color: "#2E7D32" },
+    // Greeting Banner
+    greetingBanner: {
+      backgroundColor: "rgba(255, 200, 87, 0.15)",
+      marginHorizontal: 20,
+      marginVertical: 16,
+      borderRadius: 24,
+      padding: 24,
+      minHeight: 35,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    greetingBannerOverlay: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flex: 1,
+      backgroundColor: "rgba(255, 245, 230, 0.6)",
+      padding: 0,
+      borderRadius: 20,
+    },
+    greetingContent: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    greetingTitle: {
+      fontSize: 28,
+      fontWeight: "900",
+      color: colors.text || "#1a1a1a",
+      marginBottom: 12,
+    },
+    greetingSubtitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text || "#333333",
+    },
+    greetingTreesRight: {
+      justifyContent: "center",
+      alignItems: "center",
+      marginLeft: 16,
+    },
+    treeEmoji: {
+      fontSize: 60,
+      marginBottom: 8,
+    },
+    treeEmojiSmall: {
+      fontSize: 40,
+      opacity: 0.7,
+    },
 
-  // Humanistic Crop Insights
-  cropInsightsScroll: {
-    marginBottom: 20,
-  },
-  cropCircle: {
-    width: 90,
-    alignItems: "center",
-    marginRight: 16,
-  },
-  cropCircleImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "#FAF9F7",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#4A5D23",
-    marginBottom: 8,
-    shadowColor: "#4A5D23",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-    overflow: "hidden", // Important for image clipping
-  },
-  cropCircleImageInner: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 33, // Slightly smaller to account for border
-  },
-  cropCircleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#1B5E20",
-    textAlign: "center",
-  },
+    // Weather Banner - Enhanced
+    weatherBannerEnhanced: {
+      backgroundColor: colors.surface || "#2C2C2C",
+      marginHorizontal: 20,
+      marginVertical: 16,
+      borderRadius: 16,
+      padding: 20,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    weatherLeftSection: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    weatherIconBox: {
+      backgroundColor: colors.error || "#8B6F47",
+      width: 70,
+      height: 70,
+      borderRadius: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 16,
+    },
+    weatherIconEmoji: {
+      fontSize: 40,
+    },
+    weatherInfo: {
+      justifyContent: "center",
+    },
+    weatherTemp: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: colors.white || "#FFFFFF",
+    },
+    weatherCondition: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.white || "#B0BEC5",
+    },
+    weatherOptimal: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.success || "#81C784",
+      marginTop: 6,
+    },
+    weatherRightSection: {
+      justifyContent: "center",
+      alignItems: "flex-end",
+      marginLeft: 16,
+    },
+    humidityLabel: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.subText || "#999",
+      marginBottom: 6,
+    },
+    humidityValue: {
+      fontSize: 24,
+      fontWeight: "800",
+      color: colors.white || "#FFFFFF",
+    },
 
-  // Humanistic Weather Card
-  weatherCardHumanistic: {
-    marginHorizontal: 20,
-    marginBottom: 24,
-    backgroundColor: "#FAF9F7",
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 0,
-  },
-  weatherHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  weatherTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#4A5D23",
-    marginLeft: 10,
-  },
-  weatherContent: {
-    alignItems: "flex-start",
-  },
-  weatherTemp: {
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#1B5E20",
-    marginBottom: 4,
-  },
-  weatherCondition: {
-    fontSize: 16,
-    color: "#666",
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  weatherMessage: {
-    fontSize: 14,
-    color: "#555",
-    lineHeight: 20,
-    fontStyle: "italic",
-  },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.text || "#222",
+      marginLeft: 20,
+      marginBottom: 15,
+      marginTop: 10,
+    },
+    sectionTitleHumanistic: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: colors.primary || "#1B5E20", // Forest Green
+      marginLeft: 20,
+      marginBottom: 16,
+      marginTop: 24,
+      letterSpacing: 0.3,
+    },
 
-  // Humanistic Recommendations
-  recommendationsHumanistic: {
-    marginBottom: 20,
-  },
-  recommendCardHumanistic: {
-    width: 160,
-    backgroundColor: "#FAF9F7",
-    borderRadius: 18,
-    padding: 12,
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 0,
-  },
-  recommendImageHumanistic: {
-    width: "100%",
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: "#F1F8E9",
-    marginBottom: 10,
-  },
-  recommendImagePlaceholder: {
-    width: "100%",
-    height: 100,
-    borderRadius: 12,
-    backgroundColor: "#F1F8E9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  recommendNameHumanistic: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1B5E20",
-    marginBottom: 6,
-    lineHeight: 18,
-  },
-  recommendPriceHumanistic: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#4A5D23",
-  },
+    recommendations: { paddingLeft: 20, paddingRight: 20 },
+    recommendCard: {
+      width: 150,
+      backgroundColor: colors.surface || "#fff",
+      borderRadius: 16,
+      padding: 15,
+      marginRight: 15,
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 5,
+      elevation: 3,
+      marginBottom: 10,
+    },
+    recommendImage: {
+      width: "100%",
+      height: 90,
+      backgroundColor: colors.surface || "#F1F8E9",
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    recommendName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text || "#333",
+      marginBottom: 5,
+      lineHeight: 20,
+    },
+    recommendPrice: {
+      fontSize: 15,
+      fontWeight: "bold",
+      color: colors.primary || "#2E7D32",
+    },
 
-  adCardVertical: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    overflow: "hidden",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  adImage: { width: "100%", height: 180, resizeMode: "cover" },
-  adContent: { padding: 15 },
-  adTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2E7D32",
-    marginBottom: 6,
-  },
-  adSubtitle: { fontSize: 14, color: "#555", lineHeight: 20 },
-  adBadge: {
-    position: "absolute",
-    top: 15,
-    right: 15,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  adBadgeText: {
-    color: "#2E7D32",
-    fontSize: 11,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
+    // Humanistic Crop Insights
+    cropInsightsScroll: {
+      marginBottom: 20,
+    },
+    cropCircle: {
+      width: 90,
+      alignItems: "center",
+      marginRight: 16,
+    },
+    cropCircleImage: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: colors.surface || "#FAF9F7",
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: colors.primaryDark || colors.primary || "#4A5D23",
+      marginBottom: 8,
+      shadowColor: colors.primaryDark || colors.primary || "#4A5D23",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 2,
+      overflow: "hidden", // Important for image clipping
+    },
+    cropCircleImageInner: {
+      width: "100%",
+      height: "100%",
+      borderRadius: 33, // Slightly smaller to account for border
+    },
+    cropCircleText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: colors.primary || "#1B5E20",
+      textAlign: "center",
+    },
 
-  // Humanistic Ad Cards
-  adCardHumanistic: {
-    backgroundColor: "#FAF9F7",
-    borderRadius: 20,
-    marginBottom: 20,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 0,
-  },
-  adImageHumanistic: {
-    width: "100%",
-    height: 200,
-    resizeMode: "cover",
-  },
-  adContentHumanistic: {
-    padding: 18,
-  },
-  adTitleHumanistic: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1B5E20",
-    marginBottom: 8,
-    letterSpacing: 0.3,
-  },
-  adSubtitleHumanistic: {
-    fontSize: 15,
-    color: "#555",
-    lineHeight: 22,
-  },
-  adBadgeHumanistic: {
-    position: "absolute",
-    top: 18,
-    right: 18,
-    backgroundColor: "rgba(74, 93, 35, 0.95)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  adBadgeTextHumanistic: {
-    color: "#FAF9F7",
-    fontSize: 11,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
+    // Humanistic Weather Card
+    weatherCardHumanistic: {
+      marginHorizontal: 20,
+      marginBottom: 24,
+      backgroundColor: colors.surface || "#FAF9F7",
+      borderRadius: 20,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#E0E0E0",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 0,
+    },
+    weatherHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    weatherTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.primaryDark || colors.primary || "#4A5D23",
+      marginLeft: 10,
+    },
+    weatherContent: {
+      alignItems: "flex-start",
+    },
+    weatherTemp: {
+      fontSize: 36,
+      fontWeight: "800",
+      color: colors.primary || "#1B5E20",
+      marginBottom: 4,
+    },
+    weatherCondition: {
+      fontSize: 16,
+      color: colors.subText || "#666",
+      fontWeight: "600",
+      marginBottom: 8,
+    },
+    weatherMessage: {
+      fontSize: 14,
+      color: colors.subText || "#555",
+      lineHeight: 20,
+      fontStyle: "italic",
+    },
 
-  emptyStateContainer: { alignItems: "center", marginTop: 20, padding: 30 },
-  emptyStateText: { marginTop: 10, color: "#888", fontSize: 14 },
+    // Humanistic Recommendations
+    recommendationsHumanistic: {
+      marginBottom: 20,
+    },
+    recommendCardHumanistic: {
+      width: 160,
+      backgroundColor: colors.surface || "#FAF9F7",
+      borderRadius: 18,
+      padding: 12,
+      marginRight: 16,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#E0E0E0",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 0,
+    },
+    recommendImageHumanistic: {
+      width: "100%",
+      height: 100,
+      borderRadius: 12,
+      backgroundColor: colors.surface || "#F1F8E9",
+      marginBottom: 10,
+    },
+    recommendImagePlaceholder: {
+      width: "100%",
+      height: 100,
+      borderRadius: 12,
+      backgroundColor: "#F1F8E9",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    recommendNameHumanistic: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.primary || "#1B5E20",
+      marginBottom: 6,
+      lineHeight: 18,
+    },
+    recommendPriceHumanistic: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: colors.primaryDark || colors.primary || "#4A5D23",
+    },
 
-  searchContainer: {
-    flexDirection: "row",
-    margin: 20,
-    padding: 14,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  categoriesScroll: { paddingLeft: 20, marginBottom: 20 },
-  categoryCard: { alignItems: "center", marginRight: 20 },
-  iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#eee",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    elevation: 2,
-  },
-  activeIconCircle: { backgroundColor: "#E8F5E9", borderColor: "#2E7D32" },
-  categoryName: { fontSize: 12, color: "#666", fontWeight: "500" },
-  activeCategoryName: { color: "#2E7D32", fontWeight: "bold" },
+    adCardVertical: {
+      backgroundColor: colors.surface || "#fff",
+      borderRadius: 16,
+      marginHorizontal: 20,
+      marginBottom: 20,
+      overflow: "hidden",
+      elevation: 3,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 5,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#eee",
+    },
+    adImage: { width: "100%", height: 180, resizeMode: "cover" },
+    adContent: { padding: 15 },
+    adTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: "#2E7D32",
+      marginBottom: 6,
+    },
+    adSubtitle: { fontSize: 14, color: "#555", lineHeight: 20 },
+    adBadge: {
+      position: "absolute",
+      top: 15,
+      right: 15,
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 20,
+    },
+    adBadgeText: {
+      color: colors.primary || "#2E7D32",
+      fontSize: 11,
+      fontWeight: "bold",
+      textTransform: "uppercase",
+    },
 
-  productsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 15,
-  },
-  productCard: {
-    width: width / 2 - 24,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    margin: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-    overflow: "hidden",
-  },
-  productImg: { width: "100%", height: 130, resizeMode: "cover" },
-  productPlaceholder: {
-    width: "100%",
-    height: 130,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 4,
-  },
-  productPrice: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#2E7D32",
-    marginBottom: 10,
-  },
-  addToCartBtn: {
-    backgroundColor: "#F1F8E9",
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  addToCartText: { color: "#2E7D32", fontSize: 12, fontWeight: "bold" },
+    // Humanistic Ad Cards
+    adCardHumanistic: {
+      backgroundColor: colors.surface || "#FAF9F7",
+      borderRadius: 20,
+      marginBottom: 20,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#E0E0E0",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 0,
+    },
+    adImageHumanistic: {
+      width: "100%",
+      height: 200,
+      resizeMode: "cover",
+    },
+    adContentHumanistic: {
+      padding: 18,
+    },
+    adTitleHumanistic: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.primary || "#1B5E20",
+      marginBottom: 8,
+      letterSpacing: 0.3,
+    },
+    adSubtitleHumanistic: {
+      fontSize: 15,
+      color: "#555",
+      lineHeight: 22,
+    },
+    adBadgeHumanistic: {
+      position: "absolute",
+      top: 18,
+      right: 18,
+      backgroundColor: colors.primaryDark
+        ? "rgba(19,59,92,0.95)"
+        : "rgba(74, 93, 35, 0.95)",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    adBadgeTextHumanistic: {
+      color: colors.white || "#FAF9F7",
+      fontSize: 11,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
 
-  // ✅ ULTRA-LIFTED Floating Cart
-  floatingCartBtn: {
-    position: "absolute",
-    bottom: Platform.OS === "android" ? 95 : 120,
-    right: 20,
-    backgroundColor: "#FF9800",
-    paddingVertical: 14,
-    paddingHorizontal: 22,
-    borderRadius: 30,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    zIndex: 999,
-  },
+    emptyStateContainer: { alignItems: "center", marginTop: 20, padding: 30 },
+    emptyStateText: {
+      marginTop: 10,
+      color: colors.subText || "#888",
+      fontSize: 14,
+    },
 
-  // ✅ VARIANT MODAL STYLES
-  variantOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  variantSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    padding: 25,
-    paddingBottom: 40,
-  },
-  variantHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  variantTitle: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  variantSub: { fontSize: 14, color: "#777", marginBottom: 20 },
-  variantOption: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 18,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 15,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  variantSizeText: { fontSize: 16, fontWeight: "700", color: "#333" },
-  variantPriceText: {
-    fontSize: 15,
-    color: "#2E7D32",
-    fontWeight: "bold",
-    marginTop: 4,
-  },
+    searchContainer: {
+      flexDirection: "row",
+      margin: 20,
+      padding: 14,
+      backgroundColor: colors.surface || "#fff",
+      borderRadius: 12,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#eee",
+    },
+    categoriesScroll: { paddingLeft: 20, marginBottom: 20 },
+    categoryCard: { alignItems: "center", marginRight: 20 },
+    iconCircle: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.surface || "#fff",
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#eee",
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      elevation: 2,
+    },
+    activeIconCircle: {
+      backgroundColor: colors.surface || "#E8F5E9",
+      borderColor: colors.primary || "#2E7D32",
+    },
+    categoryName: {
+      fontSize: 12,
+      color: colors.subText || "#666",
+      fontWeight: "500",
+    },
+    activeCategoryName: {
+      color: colors.primary || "#2E7D32",
+      fontWeight: "bold",
+    },
 
-  orderCard: {
-    backgroundColor: "#fff",
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "#f5f5f5",
-  },
-  orderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  orderProduct: { fontWeight: "700", fontSize: 16, color: "#333" },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  orderStatus: { fontSize: 11, fontWeight: "bold" },
-  orderDate: { fontSize: 13, color: "#777", marginBottom: 15 },
-  trackBtn: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    padding: 12,
-    borderRadius: 10,
-  },
-  trackBtnText: { color: "#2E7D32", fontWeight: "600", fontSize: 14 },
+    productsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      paddingHorizontal: 15,
+    },
+    productCard: {
+      width: width / 2 - 24,
+      backgroundColor: colors.surface || "#fff",
+      borderRadius: 16,
+      margin: 8,
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 3,
+      overflow: "hidden",
+    },
+    productImg: { width: "100%", height: 130, resizeMode: "cover" },
+    productPlaceholder: {
+      width: "100%",
+      height: 130,
+      backgroundColor: colors.lightGray || "#f0f0f0",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    productName: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.text || "#333",
+      marginBottom: 4,
+    },
+    productPrice: {
+      fontSize: 15,
+      fontWeight: "bold",
+      color: colors.primary || "#2E7D32",
+      marginBottom: 10,
+    },
+    addToCartBtn: {
+      backgroundColor: colors.surface || "#F1F8E9",
+      paddingVertical: 8,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    addToCartText: {
+      color: colors.primary || "#2E7D32",
+      fontSize: 12,
+      fontWeight: "bold",
+    },
 
-  chatFooter: {
-    padding: 15,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#eee",
-  },
-  bubble: { maxWidth: "80%", padding: 14, borderRadius: 18, marginBottom: 12 },
-  botBubble: {
-    backgroundColor: "#fff",
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 4,
-    elevation: 1,
-  },
-  userBubble: {
-    backgroundColor: "#DCF8C6",
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 4,
-    elevation: 1,
-  },
-  bubbleText: { fontSize: 15, lineHeight: 22 },
-  botText: { color: "#333" },
-  userText: { color: "#111" },
+    // ✅ ULTRA-LIFTED Floating Cart
+    floatingCartBtn: {
+      position: "absolute",
+      bottom: Platform.OS === "android" ? 95 : 120,
+      right: 20,
+      backgroundColor: colors.accent || colors.secondary || "#FF9800",
+      paddingVertical: 14,
+      paddingHorizontal: 22,
+      borderRadius: 30,
+      flexDirection: "row",
+      alignItems: "center",
+      elevation: 10,
+      shadowColor: "#000",
+      shadowOpacity: 0.3,
+      shadowRadius: 5,
+      zIndex: 999,
+    },
 
-  chatChip: {
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    margin: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    elevation: 2,
-  },
-  chatChipText: { color: "#075E54", fontWeight: "600", fontSize: 13 },
-  chatInput: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-    padding: 12,
-    borderRadius: 25,
-    marginRight: 10,
-    color: "#333",
-  },
-  chatSendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#075E54",
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 2,
-  },
+    // ✅ VARIANT MODAL STYLES
+    variantOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    variantSheet: {
+      backgroundColor: colors.surface || "#fff",
+      borderTopLeftRadius: 25,
+      borderTopRightRadius: 25,
+      padding: 25,
+      paddingBottom: 40,
+    },
+    variantHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 15,
+    },
+    variantTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: colors.text || "#333",
+    },
+    variantSub: {
+      fontSize: 14,
+      color: colors.subText || "#777",
+      marginBottom: 20,
+    },
+    variantOption: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 18,
+      backgroundColor: colors.background || "#F8F9FA",
+      borderRadius: 15,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#eee",
+    },
+    variantSizeText: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text || "#333",
+    },
+    variantPriceText: {
+      fontSize: 15,
+      color: colors.primary || "#2E7D32",
+      fontWeight: "bold",
+      marginTop: 4,
+    },
 
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    paddingTop: 10,
-    paddingBottom: 25,
-    paddingHorizontal: 10,
-    elevation: 8,
-  },
-  navItem: { flex: 1, alignItems: "center" },
-  navText: { fontSize: 11, color: "#aaa", marginTop: 4, fontWeight: "500" },
-  navTextActive: { color: "#2E7D32", fontWeight: "700" },
+    orderCard: {
+      backgroundColor: colors.surface || "#fff",
+      marginHorizontal: 20,
+      marginBottom: 15,
+      padding: 20,
+      borderRadius: 16,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#f5f5f5",
+    },
+    orderHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 15,
+    },
+    orderProduct: {
+      fontWeight: "700",
+      fontSize: 16,
+      color: colors.text || "#333",
+    },
+    statusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 20,
+    },
+    orderStatus: { fontSize: 11, fontWeight: "bold" },
+    orderDate: {
+      fontSize: 13,
+      color: colors.subText || "#777",
+      marginBottom: 15,
+    },
+    trackBtn: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      backgroundColor: colors.background || "#F9FAFB",
+      padding: 12,
+      borderRadius: 10,
+    },
+    trackBtnText: {
+      color: colors.primary || "#2E7D32",
+      fontWeight: "600",
+      fontSize: 14,
+    },
 
-  qtySelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#F1F8E9",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "#DCFCE7",
-    width: "100%",
-  },
-  qtyBtn: {
-    padding: 8,
-    backgroundColor: "#fff",
-    borderRadius: 6,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  qtyValue: { fontSize: 16, fontWeight: "bold", color: "#2E7D32" },
-  mrpStrike: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    textDecorationLine: "line-through", // Makes 2̶2̶5̶0̶
-    marginLeft: 8, // Separates prices
-  },
-  discountBadgeContainer: {
-    position: "absolute",
-    top: 5,
-    right: 5,
-    backgroundColor: "#EF4444",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    zIndex: 10,
-    elevation: 3,
-  },
-  discountBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-});
+    chatFooter: {
+      padding: 15,
+      backgroundColor: colors.surface || "#fff",
+      borderTopWidth: 1,
+      borderColor: colors.cardBorder || "#eee",
+    },
+    bubble: {
+      maxWidth: "80%",
+      padding: 14,
+      borderRadius: 18,
+      marginBottom: 12,
+    },
+    botBubble: {
+      backgroundColor: colors.surface || "#fff",
+      alignSelf: "flex-start",
+      borderBottomLeftRadius: 4,
+      elevation: 1,
+    },
+    userBubble: {
+      backgroundColor: colors.success || "#DCF8C6",
+      alignSelf: "flex-end",
+      borderBottomRightRadius: 4,
+      elevation: 1,
+    },
+    bubbleText: { fontSize: 15, lineHeight: 22 },
+    botText: { color: colors.text || "#333" },
+    userText: { color: colors.text || "#111" },
+
+    chatChip: {
+      backgroundColor: colors.surface || "#fff",
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: colors.cardBorder || "#E0E0E0",
+      margin: 4,
+      flexDirection: "row",
+      alignItems: "center",
+      elevation: 2,
+    },
+    chatChipText: {
+      color: colors.primaryDark || colors.primary || "#075E54",
+      fontWeight: "600",
+      fontSize: 13,
+    },
+    chatInput: {
+      flex: 1,
+      backgroundColor: colors.lightGray || "#f0f0f0",
+      padding: 12,
+      borderRadius: 25,
+      marginRight: 10,
+      color: colors.text || "#333",
+    },
+    chatSendBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primaryDark || colors.primary || "#075E54",
+      justifyContent: "center",
+      alignItems: "center",
+      elevation: 2,
+    },
+
+    bottomNav: {
+      flexDirection: "row",
+      backgroundColor: colors.surface || "#fff",
+      borderTopWidth: 1,
+      borderTopColor: colors.cardBorder || "#f0f0f0",
+      paddingTop: 10,
+      paddingBottom: 25,
+      paddingHorizontal: 10,
+      elevation: 8,
+    },
+    navItem: { flex: 1, alignItems: "center" },
+    navText: {
+      fontSize: 11,
+      color: colors.subText || "#aaa",
+      marginTop: 4,
+      fontWeight: "500",
+    },
+    navTextActive: { color: colors.primary || "#2E7D32", fontWeight: "700" },
+
+    qtySelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.surface || "#F1F8E9",
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: colors.success || "#DCFCE7",
+      width: "100%",
+    },
+    qtyBtn: {
+      padding: 8,
+      backgroundColor: colors.surface || "#fff",
+      borderRadius: 6,
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+    },
+    qtyValue: {
+      fontSize: 16,
+      fontWeight: "bold",
+      color: colors.primary || "#2E7D32",
+    },
+    mrpStrike: {
+      fontSize: 12,
+      color: colors.subText || "#9CA3AF",
+      textDecorationLine: "line-through", // Makes 2̶2̶5̶0̶
+      marginLeft: 8, // Separates prices
+    },
+    discountBadgeContainer: {
+      position: "absolute",
+      top: 5,
+      right: 5,
+      backgroundColor: colors.error || "#EF4444",
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+      borderRadius: 4,
+      zIndex: 10,
+      elevation: 3,
+    },
+    discountBadgeText: {
+      color: colors.white || "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "bold",
+    },
+  });
+}

@@ -3,29 +3,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { getAllSuvidhaks, getSuvidhakPerformance } from "../utils/database";
-
-// 🎨 Professional Color Palette
-const COLORS = {
-  primary: "#1E40AF", // Royal Blue
-  secondary: "#F3F4F6", // Light Gray Background
-  white: "#FFFFFF",
-  text: "#111827",
-  subText: "#6B7280",
-  success: "#10B981", // Green
-  accent: "#F59E0B", // Amber (Rank)
-  taskBtn: "#00897B", // Teal (Contrast for My Tasks - Professional)
-  cardBorder: "#E5E7EB",
-};
+import theme from "../utils/theme";
+const COLORS = theme.COLORS;
 
 export default function HomeSuvidhakScreen() {
   const router = useRouter();

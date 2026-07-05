@@ -3,28 +3,19 @@ import firestore from "@react-native-firebase/firestore";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  Alert,
-  Linking,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Linking,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { getAllSuvidhaks } from "../utils/database";
-
-const COLORS = {
-  primary: "#0D47A1",
-  secondary: "#F5F7FA",
-  white: "#FFFFFF",
-  text: "#1F2937",
-  subText: "#6B7280",
-  error: "#EF4444",
-  success: "#10B981",
-  border: "#E5E7EB",
-};
+import theme from "../utils/theme";
+const COLORS = theme.COLORS;
 
 export default function AdminSuvidhaksScreen() {
   const router = useRouter();

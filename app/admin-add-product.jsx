@@ -3,34 +3,23 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { uploadToCloudinary } from "../utils/cloudinaryUpload";
 import { addProduct } from "../utils/database";
-
-const COLORS = {
-  primary: "#0D47A1",
-  secondary: "#F5F7FA",
-  white: "#FFFFFF",
-  text: "#1F2937",
-  subText: "#6B7280",
-  border: "#E5E7EB",
-  success: "#10B981",
-  error: "#EF4444",
-  inputBg: "#F9FAFB",
-  warning: "#F59E0B", // ✅ Added for "Call for Price" state
-};
+import theme from "../utils/theme";
+const COLORS = theme.COLORS;
 
 export default function AdminAddProductScreen() {
   const router = useRouter();
@@ -57,7 +46,7 @@ export default function AdminAddProductScreen() {
     if (!vQty || !vUnit || !vPrice) {
       Alert.alert(
         "Incomplete",
-        "Please fill Quantity, Unit, and Price for this size."
+        "Please fill Quantity, Unit, and Price for this size.",
       );
       return;
     }
@@ -82,7 +71,7 @@ export default function AdminAddProductScreen() {
     if (status !== "granted") {
       Alert.alert(
         "Permission needed",
-        "We need permission to access your photos!"
+        "We need permission to access your photos!",
       );
       return;
     }

@@ -2,32 +2,21 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { firestore } from "../config/firebase";
-
-const COLORS = {
-  primary: "#0D47A1",
-  secondary: "#F5F7FA",
-  white: "#FFFFFF",
-  text: "#1F2937",
-  subText: "#6B7280",
-  border: "#E5E7EB",
-  success: "#10B981",
-  error: "#EF4444",
-  inputBg: "#F9FAFB",
-  warning: "#F59E0B",
-};
+import theme from "../utils/theme";
+const COLORS = theme.COLORS;
 
 export default function AdminEditProductScreen() {
   const router = useRouter();
