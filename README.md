@@ -69,3 +69,5 @@ For help setting up the project locally or reviewing its design details, refer t
 * **🏗️ App Architecture**: Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) to understand navigation logic and data structures.
 * **🤖 AI/ML Features Guide**: Review the smart recommendations blueprint in [docs/ML_FEATURES_PLAN.md](docs/ML_FEATURES_PLAN.md).
 * **🩹 Bug Fixes & Checks**: Read [docs/BUG_REPORT.md](docs/BUG_REPORT.md) and [docs/PROFESSIONAL_CHECKLIST.md](docs/PROFESSIONAL_CHECKLIST.md) for quality logs.
+
+....!
